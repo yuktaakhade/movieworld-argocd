@@ -13,7 +13,7 @@ permissions:
 jobs:
   ci:
     name: Build, Scan, Push (GCP)
-    runs-on: [self-hosted, linux, docker]
+    runs-on: [self-hosted]
 
     env:
       IMAGE_NAME: movieworld
@@ -82,4 +82,3 @@ jobs:
           tags: |
             ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-            
