@@ -64,7 +64,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/github
+          workload_identity_provider: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
           service_account: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
 
       - name: Configure Docker for Artifact Registry
