@@ -81,3 +81,5 @@ jobs:
           push: true
           tags: |
             ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+            
