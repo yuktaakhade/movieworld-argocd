@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "movieworld.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "movieworld.labels" . | nindent 4 }}
+    app: {{ include "movieworld.name" . }}
+    version: v1
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "movieworld.selectorLabels" . | nindent 6 }}
+      app: {{ include "movieworld.name" . }}
+      version: v1
+  template:
+    metadata:
+      labels:
+        {{- include "movieworld.selectorLabels" . | nindent 8 }}
+        app: {{ include "movieworld.name" . }}
+        version: v1
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "movieworld.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.application.port }}
+          name: http
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: {{ .Values.application.profiles | quote }}
+        - name: SERVER_PORT
+          value: {{ .Values.application.port | quote }}
+        - name: MOVIE_REVIEW_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "movieworld.fullname" . }}-config
+              key: moviereview-service-url
+        {{- if .Values.opentelemetry.enabled }}
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: {{ .Values.opentelemetry.endpoint | quote }}
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: {{ .Values.opentelemetry.resourceAttributes | quote }}
+        - name: OTEL_METRICS_EXPORTER
+          value: {{ .Values.opentelemetry.metricsExporter | quote }}
+        - name: OTEL_LOGS_EXPORTER
+          value: {{ .Values.opentelemetry.logsExporter | quote }}
+        - name: OTEL_PROPAGATORS
+          value: {{ .Values.opentelemetry.propagators | quote }}
+        {{- end }}
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "movieworld.fullname" . }}-config
+              key: database-url
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "movieworld.fullname" . }}-secrets
+              key: database-username
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "movieworld.fullname" . }}-secrets
+              key: database-password
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: {{ .Values.application.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: {{ .Values.application.port }}
+          initialDelaySeconds: 60
+          periodSeconds: 15
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ include "movieworld.fullname" . }}-config
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

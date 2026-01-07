@@ -1,0 +1,120 @@
+# Default values for movieworld.
+# This is a YAML-formatted file.
+
+namespace: movie
+replicaCount: 2
+
+image:
+  repository: ${DOCKER_REGISTRY}/movieworld
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/actuator/prometheus"
+  prometheus.io/port: "9091"
+  sidecar.istio.io/inject: "true"
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 9091
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Application specific configuration
+application:
+  port: 9091
+  profiles: prod
+  
+# Database configuration
+database:
+  url: jdbc:mysql://mysql:3306/movieworld
+  username: movieworld
+  password: password
+
+# External services configuration
+services:
+  moviereview:
+    url: http://moviereview:9093
+
+# OpenTelemetry configuration
+opentelemetry:
+  enabled: true
+  endpoint: http://otel-collector:4317
+  resourceAttributes: service.name=movieworld,service.version=1.0.0,deployment.environment=production
+  metricsExporter: otlp
+  logsExporter: otlp
+  propagators: tracecontext,baggage,b3
+
+# Istio configuration
+istio:
+  enabled: true
+  gateway:
+    enabled: true
+    hosts:
+      - movieworld.example.com
+  virtualService:
+    enabled: true
+    hosts:
+      - movieworld.example.com
+      - movieworld
+    gateways:
+      - movieworld-gateway
+      - mesh
+    routes:
+      - prefix: /api/movieworld
+        destination:
+          host: movieworld
+          port: 9091
+          subset: v1
+        retries:
+          attempts: 3
+          perTryTimeout: 2s
+        timeout: 5s
+  destinationRule:
+    enabled: true
+    host: movieworld
+    trafficPolicy:
+      connectionPool:
+        http:
+          http1MaxPendingRequests: 100
+          maxRequestsPerConnection: 10
+      outlierDetection:
+        consecutive5xxErrors: 5
+        interval: 30s
+        baseEjectionTime: 60s
+    subsets:
+      - name: v1
+        labels:
+          version: v1

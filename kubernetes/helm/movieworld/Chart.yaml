@@ -1,0 +1,14 @@
+apiVersion: v2
+name: movieworld
+description: A Helm chart for MovieWorld microservice with Istio and OpenTelemetry support
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - movieworld
+  - microservice
+  - spring-boot
+  - observability
+maintainers:
+  - name: DevOps Team
+    email: devops@example.com

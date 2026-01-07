@@ -1,0 +1,25 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mysql-ebs
+provisioner: ebs.csi.aws.com
+volumeBindingMode: Immediate
+reclaimPolicy: Delete
+parameters:
+  type: gp3
+  fsType: ext4
+  encrypted: "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: movieworld-mysql-pvc
+  namespace: movie
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: mysql-ebs
+  resources:
+    requests:
+      storage: 1Gi
+      

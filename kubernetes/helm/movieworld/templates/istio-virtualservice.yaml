@@ -1,0 +1,34 @@
+{{- if and .Values.istio.enabled .Values.istio.virtualService.enabled -}}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ include "movieworld.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "movieworld.labels" . | nindent 4 }}
+spec:
+  hosts:
+  {{- range .Values.istio.virtualService.hosts }}
+  - {{ . | quote }}
+  {{- end }}
+  gateways:
+  {{- range .Values.istio.virtualService.gateways }}
+  - {{ . }}
+  {{- end }}
+  http:
+  {{- range .Values.istio.virtualService.routes }}
+  - match:
+    - uri:
+        prefix: {{ .prefix }}
+    route:
+    - destination:
+        host: {{ .destination.host }}
+        port:
+          number: {{ .destination.port }}
+        subset: {{ .destination.subset }}
+    retries:
+      attempts: {{ .retries.attempts }}
+      perTryTimeout: {{ .retries.perTryTimeout }}
+    timeout: {{ .timeout }}
+  {{- end }}
+{{- end }}

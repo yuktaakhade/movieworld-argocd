@@ -1,0 +1,20 @@
+{{- if .Values.opentelemetry.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "movieworld.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "movieworld.labels" . | nindent 4 }}
+    release: prometheus-operator
+spec:
+  selector:
+    matchLabels:
+      {{- include "movieworld.selectorLabels" . | nindent 6 }}
+      app: {{ include "movieworld.name" . }}
+  endpoints:
+  - port: http
+    path: /actuator/prometheus
+    interval: 15s
+    scrapeTimeout: 14s
+{{- end }}

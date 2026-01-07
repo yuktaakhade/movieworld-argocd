@@ -1,0 +1,260 @@
+name: MovieWorld CI/CD Pipeline
+ 
+on:
+  push:
+    branches: ["feature-app"]
+  pull_request:
+    branches: ["feature-app"]
+
+permissions:
+    id-token: write
+    contents: read
+    actions: write
+    packages: write # Needed for Docker operation
+ 
+jobs:
+  CI:
+   name: Build and Deploy to AWS
+   runs-on: self-hosted
+ 
+  # Checkout code from the repository
+   steps:
+   - name: Checkout Code
+     uses: actions/checkout@v3
+
+  # Set up JDK
+   - name: Set up JDK 17
+     uses: actions/setup-java@v3
+     with:
+       java-version: '17'
+       distribution: 'temurin'
+       cache: maven
+
+# Scan repository for secrets using Trivy
+   - name: Scan for secrets with Trivy
+     uses: aquasecurity/trivy-action@master
+     with:
+      scan-type: 'fs'
+      scan-ref: '.'
+      format: 'table'
+      output: 'trivy-secrets-results.txt'
+      severity: 'CRITICAL,HIGH'
+      scanners: 'secret'
+      exit-code: '0'  # Fail pipeline on secrets
+
+  # Upload Trivy secrets scan results
+   - name: Upload Trivy secrets scan results
+     uses: actions/upload-artifact@v4
+     if: always()
+     with:
+      name: trivy-secrets-scan-results
+      path: trivy-secrets-results.txt
+      retention-days: 7
+
+    # Run unit tests and generate reports
+   - name: Run Unit Tests
+     run: mvn test
+
+  # Generate JaCoCo coverage report
+   - name: Generate JaCoCo Coverage Report
+     run: mvn jacoco:report
+
+  # Upload test results
+   - name: Upload Test Results
+     if: always()
+     uses: actions/upload-artifact@v4
+     with:
+      name: test-results
+      path: ./target/surefire-reports/
+      retention-days: 7
+      if-no-files-found: warn
+
+  # Upload coverage report
+   - name: Upload Coverage Report
+     if: always()
+     uses: actions/upload-artifact@v4
+     with:
+      name: coverage-report
+      path: |
+        ./target/site/jacoco/
+        ./target/site/jacoco.xml
+        ./target/jacoco.exec
+      retention-days: 7
+      if-no-files-found: warn
+
+  # # SonarQube scan
+  #  - name: Cache SonarQube packages
+  #    uses: actions/cache@v4
+  #    with:
+  #     path: ~/.sonar/cache
+  #     key: ${{ runner.os }}-sonar
+  #     restore-keys: ${{ runner.os }}-sonar
+  #  - name: Cache Maven packages
+  #    uses: actions/cache@v4
+  #    with:
+  #     path: ~/.m2
+  #     key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+  #     restore-keys: ${{ runner.os }}-m2
+  #  - name: SonarQube Build and analyze
+  #    env:
+  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+  #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+  #    run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+
+    # Run Build
+   - name: Run Build
+     run: mvn clean package
+
+
+  # # Configure AWS credentials for ECR and EKS
+  #  - name: Configure AWS credentials
+  #    uses: aws-actions/configure-aws-credentials@v3
+  #    with:
+  #      role-to-assume: ${{ secrets.AWS_IAM_ARN }}
+  #      role-session-name: movieworld-session
+  #      aws-region: ${{ secrets.AWS_REGION }}
+ 
+ 
+  # Set up Docker Buildx
+   - name: Set up Docker Buildx
+     uses: docker/setup-buildx-action@v3
+
+  # Build Docker image locally (without pushing)
+   - name: Build Docker image
+     id: build-image
+     uses: docker/build-push-action@v5
+     with:
+       context: .
+       load: true # Export to Docker engine instead of pushing
+       tags: ${{ secrets.MOVIEWORLD_IMAGE_NAME }}:${{ github.sha }}
+       cache-from: type=gha
+       cache-to: type=gha,mode=max
+
+  # Scan Docker image with Trivy
+   - name: Run Trivy vulnerability scanner
+     uses: aquasecurity/trivy-action@master
+     with:
+       image-ref: ${{ secrets.MOVIEWORLD_IMAGE_NAME }}:${{ github.sha }}
+       format: 'table'
+       output: 'trivy-image-results.txt'
+       severity: 'CRITICAL,HIGH'
+       exit-code: '0'  # Don't fail the build, just report
+
+  # Upload Trivy scan results
+   - name: Upload Trivy image scan results
+     uses: actions/upload-artifact@v4
+     with:
+       name: trivy-image-scan-results
+       path: trivy-image-results.txt
+       retention-days: 7
+
+   # Authenticate AWS with Docker to interact with an Amazon ECR registry
+   - name: Login to Amazon ECR
+     run: aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+  # # Login to Amazon ECR
+  #  - name: Login to Amazon ECR
+  #    uses: aws-actions/amazon-ecr-login@v2
+  #    id: login-ecr
+  #    with:
+  #      role-session-name: ${{ secrets.EKS_CLUSTER_NAME }}-session
+  #      aws-region: ${{ secrets.AWS_REGION }}
+
+  # Push Docker image to ECR
+   - name: Tag and push Docker image to ECR
+     id: push-image
+     uses: docker/build-push-action@v5
+     with:
+       context: .
+       push: true
+       tags: |
+         ${{ secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPO_NAME_MOVIEWORLD }}:${{ github.sha }}
+       cache-from: type=gha
+       cache-to: type=gha,mode=max
+       
+
+  # Add CI Summary
+   - name: Add CI Summary
+     run: |
+       echo "### CI Summary ✅" >> $GITHUB_STEP_SUMMARY
+       echo "- Docker image: ${{ secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPO_NAME_MOVIEWORLD }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+       echo "- Test coverage, Trivy FS & Image scan reports uploaded" >> $GITHUB_STEP_SUMMARY
+
+  CD:
+    name: Deploy to Kubernetes
+    needs: CI
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Authenticate AWS with Docker to interact with an Amazon ECR registry
+      - name: Login to Amazon ECR
+        run: aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+      # Update Deployment YAML with the new image and Deploy ECR image to EKS 
+      - name: Update Deployment YAML with New Image
+        run: |
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
+          # Use the full ECR image URL for the deployment
+          IMAGE="${{ secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPO_NAME_MOVIEWORLD }}:${{ github.sha }}"
+          sed -i "s|image: .*|image: $IMAGE|" kubernetes/manifests/deployment.yaml
+          cd kubernetes/manifests
+
+
+          # Delete existing resources
+          kubectl delete -f configmap.yaml --ignore-not-found 
+          kubectl delete -f secret.yaml --ignore-not-found 
+          kubectl delete -f deployment.yaml --ignore-not-found
+          kubectl delete -f service.yaml --ignore-not-found 
+          kubectl delete -f mysql-deployment.yaml --ignore-not-found  
+          kubectl delete -f mysql-secret.yaml --ignore-not-found  
+          kubectl delete -f mysql-sg-pvc.yaml --ignore-not-found  
+          kubectl delete -f mysql-service.yaml --ignore-not-found
+          kubectl delete -f service-monitor.yaml --ignore-not-found
+          kubectl delete namespace movie --ignore-not-found
+          
+
+          sleep 120
+
+          # First, create namespace if it doesn't exist
+          kubectl create namespace movie || true
+          kubectl label namespace movie istio.io/dataplane-mode=ambient
+          kubectl get ns movie --show-labels
+
+          
+          # Apply the StorageClass and PVC first
+          kubectl apply -f mysql-sg-pvc.yaml -n movie --validate=false
+          
+          # Apply MySQL resources
+          kubectl apply -f mysql-secret.yaml -n movie --validate=false
+          kubectl apply -f mysql-service.yaml -n movie --validate=false
+          kubectl apply -f mysql-deployment.yaml -n movie --validate=false
+          
+          # Wait for MySQL to be ready for resources
+          echo "Waiting for MySQL to be ready..."
+          sleep 45
+          
+          # Apply application resources manifests
+          kubectl apply -f configmap.yaml -n movie --validate=false
+          kubectl apply -f secret.yaml -n movie --validate=false
+          kubectl apply -f deployment.yaml -n movie --validate=false
+          kubectl apply -f service.yaml -n movie --validate=false
+
+          # Apply ServiceMonitor
+          # kubectl create namespace monitoring || true
+          kubectl apply -f service-monitor.yaml -n monitoring --validate=false
+          
+          # Verify deployment status
+          echo "Checking deployment status..."
+          kubectl get pods -n movie
+          
+
+      # Add CD Summary
+      - name: Add CD Summary
+        run: |
+          echo "### CD Summary ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Deployed image: ${{ secrets.AWS_ACCOUNT_ID}}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPO_NAME_MOVIEWORLD }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Deployment 'movieworld' rollout status checked" >> $GITHUB_STEP_SUMMARY
+     

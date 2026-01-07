@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: movieworld
+  namespace: movie
+  labels:
+    app: movieworld
+    service: movieworld
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "9091"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9091
+    targetPort: 9091
+    name: http
+  selector:
+    app: movieworld
