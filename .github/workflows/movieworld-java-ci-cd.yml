@@ -2,30 +2,35 @@ name: MovieWorld – GCP DevSecOps CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
   id-token: write
-  packages: write
 
 jobs:
   ci:
     name: Build, Scan, Push (GCP)
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, linux, docker]
 
     env:
       IMAGE_NAME: movieworld
       GAR_REGION: us-central1
       GAR_REPO: movieworld-dockerimage-repo
       PROJECT_ID: yuktaaa
-      WORKLOAD_IDENTITY_PROVIDER: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
-      SERVICE_ACCOUNT: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
-    steps:
 
+    steps:
+      # -----------------------------
+      # Checkout (MISSING BEFORE – REQUIRED)
+      # -----------------------------
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # -----------------------------
       # Java Setup
+      # -----------------------------
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -33,12 +38,15 @@ jobs:
           java-version: "17"
           cache: maven
 
+      # -----------------------------
       # Build
-
+      # -----------------------------
       - name: Build with Maven
         run: mvn clean package
 
+      # -----------------------------
       # Docker Build
+      # -----------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -47,21 +55,17 @@ jobs:
         with:
           context: .
           load: true
-          tags: ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          tags: |
+            ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      # - name: Trivy Image Scan
-      #   uses: aquasecurity/trivy-action@master
-      #   with:
-      #     image-ref: ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-      #     severity: CRITICAL,HIGH
-      #     format: table
-      #     exit-code: 0
-
+      # -----------------------------
+      # GCP Auth (OIDC – FIXED)
+      # -----------------------------
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
-          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
 
       - name: Configure Docker for Artifact Registry
         run: |
