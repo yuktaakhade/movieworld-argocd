@@ -25,9 +25,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # -----------------------------
-      # Java Setup
-      # -----------------------------
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -38,28 +35,22 @@ jobs:
       - name: Build with Maven (skip tests)
         run: mvn clean package -DskipTests
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          load: true
-          tags: |
-            ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
+          # update this provider value if your workload identity pool/provider differs
           workload_identity_provider: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
           service_account: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
 
       - name: Configure Docker for Artifact Registry
         run: |
+          gcloud config set project ${{ env.PROJECT_ID }}
           gcloud auth configure-docker ${{ env.GAR_REGION }}-docker.pkg.dev --quiet
 
-      - name: Push image to Artifact Registry
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image (Buildx)
         uses: docker/build-push-action@v5
         with:
           context: .
