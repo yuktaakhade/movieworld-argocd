@@ -1,4 +1,4 @@
-name: MovieWorld – GCP DevSecOps CI
+name: "MovieWorld – GCP DevSecOps CI"
 
 on:
   push:
@@ -20,6 +20,8 @@ jobs:
       GAR_REGION: us-central1
       GAR_REPO: movieworld-dockerimage-repo
       PROJECT_ID: yuktaaa
+      WORKLOAD_IDENTITY_PROVIDER: 'projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider'
+      SERVICE_ACCOUNT: 'movieworld-service-account@yuktaaa.iam.gserviceaccount.com'
 
     steps:
       - name: Checkout code
@@ -38,9 +40,14 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          # update this provider value if your workload identity pool/provider differs
-          workload_identity_provider: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
-          service_account: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Debug show gcloud auth info
+        run: |
+          echo "gcloud account: $(gcloud config get-value account 2>/dev/null || true)"
+          gcloud auth list || true
+          gcloud auth print-identity-token || true
 
       - name: Configure Docker for Artifact Registry
         run: |
@@ -50,13 +57,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push Docker image
-        # working-directory: ./e-shopping
-        run: |
-          IMAGE_URI=${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-          gcloud config set project ${{ env.PROJECT_ID }}
-          gcloud auth configure-docker ${{ env.GAR_REGION }}-docker.pkg.dev --quiet
-
-          docker build -t $IMAGE_URI .
-          docker push $IMAGE_URI
+      - name: Build and push Docker image (Buildx)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
