@@ -22,17 +22,18 @@ jobs:
       PROJECT_ID: yuktaaa
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-
-      # # -----------------------------
-      # # Java Setup
-      # # -----------------------------
-      # - name: Set up JDK 17
-      #   uses: actions/setup-java@v3
-      #   with:
-      #     distribution: temurin
-      #     java-version: "17"
-      #     cache: maven
+      # -----------------------------
+      # Java Setup
+      # -----------------------------
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
 
       - name: Build with Maven (skip tests)
         run: mvn clean package -DskipTests
