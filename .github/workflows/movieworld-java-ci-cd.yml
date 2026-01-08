@@ -50,10 +50,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push Docker image (Buildx)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Build and push Docker image
+        # working-directory: ./e-shopping
+        run: |
+          IMAGE_URI=${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+          gcloud config set project ${{ env.PROJECT_ID }}
+          gcloud auth configure-docker ${{ env.GAR_REGION }}-docker.pkg.dev --quiet
+
+          docker build -t $IMAGE_URI .
+          docker push $IMAGE_URI
