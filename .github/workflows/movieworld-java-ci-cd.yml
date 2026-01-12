@@ -106,6 +106,13 @@ jobs:
           push: true
           tags: ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+      - name: Install gke-gcloud-auth-plugin
+        if: ${{ env.GKE_CLUSTER && env.GKE_LOCATION }}
+        run: |
+          # Ensure the plugin is available for kubectl to auth with GKE
+          gcloud components install gke-gcloud-auth-plugin --quiet || true
+          echo "USE_GKE_GCLOUD_AUTH_PLUGIN=true" >> $GITHUB_ENV
+
       - name: GKE get credentials (gcloud)
         if: ${{ env.GKE_CLUSTER && env.GKE_LOCATION }}
         run: |
