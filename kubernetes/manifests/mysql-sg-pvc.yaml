@@ -1,15 +1,3 @@
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: mysql-ebs
-provisioner: pd.csi.storage.gke.io
-volumeBindingMode: Immediate
-reclaimPolicy: Delete
-parameters:
-  type: pd-balanced
-  fsType: ext4
-  encrypted: "true"
----
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -18,7 +6,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: mysql-ebs
+  # Use the cluster default StorageClass (remove storageClassName to let the
+  # provisioner choose the default). On GKE this is usually 'standard'.
   resources:
     requests:
       storage: 1Gi
