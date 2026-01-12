@@ -14,6 +14,9 @@ jobs:
       GAR_REGION: us-central1
       GAR_REPO: movieworld-dockerimage-repo
       PROJECT_ID: yuktaaa
+      # Set these in repository secrets to enable automatic deployment to GKE
+      GKE_CLUSTER: 	app-cluster
+      GKE_LOCATION: us-central1-a	
       WORKLOAD_IDENTITY_PROVIDER: 'projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider'
       SERVICE_ACCOUNT: 'movieworld-service-account@yuktaaa.iam.gserviceaccount.com'
     steps:
@@ -40,6 +43,8 @@ jobs:
       #     name: trivy-secrets-scan-results
       #     path: trivy-secrets-results.txt
       #     retention-days: 7
+
+
       - name: mvn:test+jacoco
         run: mvn -B clean test package jacoco:report
         
@@ -47,6 +52,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with: {name: test-results, path: ./target/surefire-reports/, retention-days: 7, if-no-files-found: warn}
+
       - name: upload:jacoco
         if: always()
         uses: actions/upload-artifact@v4
@@ -68,6 +74,7 @@ jobs:
           push: false
           load: true
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          
       - name: trivy:image
         uses: aquasecurity/trivy-action@master
         with:
@@ -76,6 +83,7 @@ jobs:
           output: trivy-image-results.txt
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
+
       - name: upload:trivy-image
         if: always()
         uses: actions/upload-artifact@v4
@@ -83,11 +91,13 @@ jobs:
           name: trivy-image-scan-results
           path: trivy-image-results.txt
           retention-days: 7
+
       - name: gcloud:auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.SERVICE_ACCOUNT }}
+
       - name: gcloud:configure-docker
         run: |
           gcloud config set project ${{ env.PROJECT_ID }}
@@ -98,3 +108,18 @@ jobs:
           context: '.'
           push: true
           tags: ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+
+      - name: gke:get-credentials
+        if: ${{ env.GKE_CLUSTER && env.GKE_LOCATION }}
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_LOCATION }}
+          project_id: ${{ env.PROJECT_ID }}
+          
+      - name: kubectl:apply-manifests
+        if: ${{ env.GKE_CLUSTER && env.GKE_LOCATION }}
+        run: |
+          kubectl apply -f kubernetes/manifests --recursive
+      
