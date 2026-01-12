@@ -20,8 +20,8 @@ jobs:
       GAR_REGION: us-central1
       GAR_REPO: movieworld-dockerimage-repo
       PROJECT_ID: yuktaaa
-      GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
-      GKE_LOCATION: ${{ secrets.GKE_LOCATION }}
+      GKE_CLUSTER: app-cluster	
+      GKE_LOCATION: us-central1-a	
       WORKLOAD_IDENTITY_PROVIDER: 'projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider'
       SERVICE_ACCOUNT: 'movieworld-service-account@yuktaaa.iam.gserviceaccount.com'
 
@@ -124,11 +124,11 @@ jobs:
           kubectl apply -f kubernetes/manifests/configmap.yaml
           kubectl apply -f kubernetes/manifests/deployment.yaml
           kubectl apply -f kubernetes/manifests/service.yaml
-          if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
-            kubectl apply -f kubernetes/manifests/service-monitor.yaml
-          else
-            echo "Skipping ServiceMonitor: CRD not present"
-          fi
-          kubectl -n movie rollout status deployment/movieworld --timeout=120s || true
+          # if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+          #   kubectl apply -f kubernetes/manifests/service-monitor.yaml
+          # else
+          #   echo "Skipping ServiceMonitor: CRD not present"
+          # fi
+          # kubectl -n movie rollout status deployment/movieworld --timeout=120s || true
 
       
