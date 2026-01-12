@@ -1,5 +1,5 @@
 
-name: "MovieWorld – GCP DevSecOps CI"
+name: MovieWorld CI - GCP DevSecOps
 
 on:
   push:
@@ -15,23 +15,17 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
-    # Environment variables used across the job
     env:
       IMAGE_NAME: movieworld
       GAR_REGION: us-central1
       GAR_REPO: movieworld-dockerimage-repo
       PROJECT_ID: yuktaaa
-      # Optional: set these repository secrets to enable automatic GKE deploy
       GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
       GKE_LOCATION: ${{ secrets.GKE_LOCATION }}
       WORKLOAD_IDENTITY_PROVIDER: 'projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider'
       SERVICE_ACCOUNT: 'movieworld-service-account@yuktaaa.iam.gserviceaccount.com'
 
     steps:
-
-      # ------------------------------------------------------------------
-      # Source + Java
-      # ------------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -42,11 +36,7 @@ jobs:
           java-version: '17'
           cache: maven
 
-
-      # ------------------------------------------------------------------
-      # Build, test and collect coverage
-      # ------------------------------------------------------------------
-      - name: Maven: test + jacoco
+      - name: Maven test and jacoco
         run: mvn -B clean test package jacoco:report
 
       - name: Upload test results
@@ -70,14 +60,10 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-
-      # ------------------------------------------------------------------
-      # Docker build + image scanning
-      # ------------------------------------------------------------------
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Docker: build (local)
+      - name: Docker build (local)
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -85,7 +71,7 @@ jobs:
           load: true
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      - name: Trivy: scan image (report)
+      - name: Trivy scan (report)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
@@ -94,7 +80,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
 
-      - name: Upload Trivy scan results
+      - name: Upload Trivy results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -102,70 +88,47 @@ jobs:
           path: trivy-image-results.txt
           retention-days: 7
 
-
-      # ------------------------------------------------------------------
-      # Authenticate to GCP and push image to Artifact Registry
-      # ------------------------------------------------------------------
-      - name: GCP: authenticate (Workload Identity)
+      - name: GCP authenticate (Workload Identity)
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.SERVICE_ACCOUNT }}
 
-      - name: GCP: configure docker for Artifact Registry
+      - name: Configure docker for Artifact Registry
         run: |
           gcloud config set project ${{ env.PROJECT_ID }}
           gcloud auth configure-docker ${{ env.GAR_REGION }}-docker.pkg.dev --quiet
 
-      - name: Docker: push to Artifact Registry
+      - name: Docker push to Artifact Registry
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: ${{ env.GAR_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-
-      # ------------------------------------------------------------------
-      # Optional: Deploy to GKE (gated by repo secrets)
-      # ------------------------------------------------------------------
-      - name: GKE: get credentials
+      - name: GKE get credentials (gcloud)
         if: ${{ env.GKE_CLUSTER && env.GKE_LOCATION }}
-        uses: google-github-actions/get-gke-credentials@v1
-        with:
-          cluster_name: ${{ env.GKE_CLUSTER }}
-          location: ${{ env.GKE_LOCATION }}
-          project_id: ${{ env.PROJECT_ID }}
+        run: |
+          gcloud container clusters get-credentials "${{ env.GKE_CLUSTER }}" --zone "${{ env.GKE_LOCATION }}" --project "${{ env.PROJECT_ID }}"
 
-      - name: Kubernetes: apply manifests (ordered)
+      - name: Apply kubernetes manifests (ordered)
         if: ${{ env.GKE_CLUSTER && env.GKE_LOCATION }}
         run: |
           set -e
-
-          echo "==> Apply namespace"
           kubectl apply -f kubernetes/manifests/namespace.yaml
-
-          echo "==> Apply storage / pvc (if present)"
           kubectl apply -f kubernetes/manifests/mysql-sg-pvc.yaml || true
-
-          echo "==> Apply MySQL secrets and resources"
           kubectl apply -f kubernetes/manifests/mysql-secret.yaml
           kubectl apply -f kubernetes/manifests/mysql-deployment.yaml
           kubectl apply -f kubernetes/manifests/mysql-service.yaml
-
-          echo "==> Apply application secrets/config and resources"
           kubectl apply -f kubernetes/manifests/secret.yaml
           kubectl apply -f kubernetes/manifests/configmap.yaml
           kubectl apply -f kubernetes/manifests/deployment.yaml
           kubectl apply -f kubernetes/manifests/service.yaml
-
-          echo "==> ServiceMonitor (only if Prometheus CRD exists)"
           if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
             kubectl apply -f kubernetes/manifests/service-monitor.yaml
           else
             echo "Skipping ServiceMonitor: CRD not present"
           fi
-
-          echo "==> Wait for app rollout (movie namespace)"
           kubectl -n movie rollout status deployment/movieworld --timeout=120s || true
 
       
