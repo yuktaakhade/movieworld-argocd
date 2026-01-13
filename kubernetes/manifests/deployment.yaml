@@ -67,6 +67,18 @@ spec:
             secretKeyRef:
               name: movieworld-mysql-secret
               key: mysql-password
+        - name: MYSQL_URL
+          value: "jdbc:mysql://movieworld-mysql.movie.svc.cluster.local:3306/movieworld?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+        - name: MYSQL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: movieworld-mysql-secret
+              key: mysql-user
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: movieworld-mysql-secret
+              key: mysql-password
         # Using DB_USER and DB_PASSWORD from above
         # resources:
         #   requests:
