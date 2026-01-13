@@ -17,11 +17,11 @@ spec:
       labels:
         app: movieworld
         version: v1
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path: "/actuator/prometheus"
-        prometheus.io/port: "9091"
-        sidecar.istio.io/inject: "true"
+      # annotations:
+        # prometheus.io/scrape: "true"
+        # prometheus.io/path: "/actuator/prometheus"
+        # prometheus.io/port: "9091"
+        # sidecar.istio.io/inject: "true"
     spec:
       containers:
       - name: movieworld
