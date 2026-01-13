@@ -1,18 +1,19 @@
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: movieworld-monitor
-  namespace: monitoring
-  labels:
-    release: stable   # ✅ Must match Prometheus release label
-spec:
-  selector:
-    matchLabels:
-      app: movieworld   # ✅ Must match service labels
-  namespaceSelector:
-    matchNames:
-      - movie
-  endpoints:
-    - port: http        # ✅ Must match service port name
-      path: /actuator/prometheus
-      interval: 15s
+# apiVersion: monitoring.coreos.com/v1
+# kind: ServiceMonitor
+# metadata:
+#   name: movieworld-monitor
+#   namespace: monitoring
+#   labels:
+#     release: stable   # ✅ Must match Prometheus release label
+# spec:
+#   selector:
+#     matchLabels:
+#       app: movieworld   # ✅ Must match service labels
+#   namespaceSelector:
+#     matchNames:
+#       - movie
+#   endpoints:
+#     - port: http        # ✅ Must match service port name
+#       path: /actuator/prometheus
+#       interval: 15s
+# # 

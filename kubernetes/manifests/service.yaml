@@ -6,10 +6,10 @@ metadata:
   labels:
     app: movieworld
     service: movieworld
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/path: "/actuator/prometheus"
-    prometheus.io/port: "9091"
+  # annotations:
+  #   prometheus.io/scrape: "true"
+  #   prometheus.io/path: "/actuator/prometheus"
+  #   prometheus.io/port: "9091"
 spec:
   type: LoadBalancer
   ports:
