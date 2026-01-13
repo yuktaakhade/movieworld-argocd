@@ -31,3 +31,38 @@ variable "github_repository" {
   type = string
   description = "The GitHub repository in the form 'owner/repo' that will be allowed to impersonate the service account"
 }
+
+variable "network_name" {
+  type    = string
+  default = "movieworld-vpc"
+}
+
+variable "subnetwork_name" {
+  type    = string
+  default = "movieworld-subnet"
+}
+
+variable "subnet_cidr" {
+  type    = string
+  default = "10.0.0.0/24"
+}
+
+variable "gke_cluster_name" {
+  type    = string
+  default = "app-cluster"
+}
+
+variable "gke_location" {
+  type    = string
+  default = "us-central1-a"
+}
+
+variable "node_machine_type" {
+  type    = string
+  default = "e2-micro"
+}
+
+variable "node_count" {
+  type    = number
+  default = 1
+}

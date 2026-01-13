@@ -13,6 +13,22 @@ provider "google" {
   region  = var.region
 }
 
+# Enable required Google APIs
+resource "google_project_service" "artifact_registry_api" {
+  service = "artifactregistry.googleapis.com"
+  project = var.project_id
+}
+
+resource "google_project_service" "container_api" {
+  service = "container.googleapis.com"
+  project = var.project_id
+}
+
+resource "google_project_service" "iamcredentials_api" {
+  service = "iamcredentials.googleapis.com"
+  project = var.project_id
+}
+
 # Create a service account for GitHub Actions
 resource "google_service_account" "github_actions_sa" {
   account_id   = var.service_account_id
@@ -76,4 +92,62 @@ output "service_account_email" {
 
 output "artifact_registry_repo" {
   value = google_artifact_registry_repository.repo.name
+}
+
+# --------------------
+# Networking & GKE
+# --------------------
+
+resource "google_compute_network" "vpc" {
+  name                    = var.network_name
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "subnet" {
+  name          = var.subnetwork_name
+  ip_cidr_range = var.subnet_cidr
+  region        = var.region
+  network       = google_compute_network.vpc.id
+}
+
+resource "google_container_cluster" "primary" {
+  name     = var.gke_cluster_name
+  location = var.gke_location
+
+  networking_mode = "VPC_NATIVE"
+  network         = google_compute_network.vpc.id
+  subnetwork      = google_compute_subnetwork.subnet.id
+
+  initial_node_count = 1
+
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  remove_default_node_pool = true
+  min_master_version = "latest"
+
+  ip_allocation_policy {
+  }
+
+  depends_on = [
+    google_project_service.container_api,
+    google_project_service.artifact_registry_api
+  ]
+}
+
+resource "google_container_node_pool" "primary_nodes" {
+  name       = "primary-node-pool"
+  cluster    = google_container_cluster.primary.name
+  location   = var.gke_location
+
+  node_config {
+    machine_type = var.node_machine_type
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform",
+    ]
+    service_account = google_service_account.github_actions_sa.email
+  }
+
+  initial_node_count = var.node_count
 }
