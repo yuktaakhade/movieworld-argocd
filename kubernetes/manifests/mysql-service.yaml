@@ -14,3 +14,5 @@ spec:
   selector:
     app: movieworld-mysql
   type: ClusterIP
+
+
