@@ -25,10 +25,10 @@ spec:
     spec:
       containers:
       - name: movieworld
-        # Update this to the image your CI pushes. Using :latest here as a temporary value —
-        # replace with the exact tag (for example the SHA) produced by your pipeline.
-        image: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld:latest
-        imagePullPolicy: Always
+        # Image will be tagged with GitHub Actions commit SHA by CI: ${{ github.sha }}
+        image: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld:${{ github.sha }}
+        # When using an immutable tag prefer IfNotPresent so nodes reuse pulled image.
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
         env:
