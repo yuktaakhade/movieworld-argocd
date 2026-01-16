@@ -1,3 +1,261 @@
+# name: MovieWorld CI/CD GCP DevSecOps
+
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#     branches: [main]
+
+# permissions:
+#   contents: read
+#   id-token: write
+
+# env:
+#   PROJECT_ID: yuktaaa
+#   REGION: us-central1
+#   ZONE: us-central1-a
+#   IMAGE_NAME: movieworld
+#   ARTIFACT_REPO: movieworld-dockerimage-repo
+#   IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld
+#   GKE_CLUSTER: app-cluster
+#   NAMESPACE: movie
+#   WORKLOAD_IDENTITY_PROVIDER: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
+#   SERVICE_ACCOUNT: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
+
+# jobs:
+#   ci-cd:
+#     name: Build, Scan, Push & Deploy to GKE
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     # --------------------------------------------------
+#     # Checkout
+#     # --------------------------------------------------
+#     - name: Checkout source
+#       uses: actions/checkout@v3
+
+#     # --------------------------------------------------
+#     # Java Build & Test
+#     # --------------------------------------------------
+#     - name: Set up JDK 17
+#       uses: actions/setup-java@v3
+#       with:
+#         distribution: temurin
+#         java-version: '17'
+#         cache: maven
+
+#     - name: Run Unit Tests & Package
+#       run: mvn -B clean test package
+
+#     # --------------------------------------------------
+#     # Docker Build (Local) + Security Scan
+#     # --------------------------------------------------
+#     - name: Set up Docker Buildx
+#       uses: docker/setup-buildx-action@v3
+
+#     - name: Build Docker image (local only)
+#       uses: docker/build-push-action@v5
+#       with:
+#         context: .
+#         load: true
+#         push: false
+#         tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
+
+#     - name: Trivy Image Scan
+#       uses: aquasecurity/trivy-action@master
+#       with:
+#         image-ref: ${{ env.IMAGE_URI }}:${{ github.sha }}
+#         severity: CRITICAL,HIGH
+#         exit-code: 0
+
+#     # --------------------------------------------------
+#     # GCP Authentication (Workload Identity)
+#     # --------------------------------------------------
+#     - name: Authenticate to Google Cloud
+#       uses: google-github-actions/auth@v2
+#       with:
+#         workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+#         service_account: ${{ env.SERVICE_ACCOUNT }}
+
+#     - name: Configure gcloud & Docker
+#       run: |
+#         gcloud config set project ${{ env.PROJECT_ID }}
+#         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+#     # --------------------------------------------------
+#     # Push Image to Artifact Registry
+#     # --------------------------------------------------
+#     - name: Push image to Artifact Registry
+#       uses: docker/build-push-action@v5
+#       with:
+#         context: .
+#         push: true
+#         tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
+
+#     # --------------------------------------------------
+#     # GKE Deployment
+#     # --------------------------------------------------
+#     - name: Get GKE credentials
+#       uses: google-github-actions/get-gke-credentials@v2
+#       with:
+#         cluster_name: ${{ env.GKE_CLUSTER }}
+#         location: ${{ env.ZONE }}
+#         project_id: ${{ env.PROJECT_ID }}
+
+#     - name: Ensure namespace exists
+#       run: |
+#         kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+#         kubectl label namespace ${{ env.NAMESPACE }} istio.io/dataplane-mode=ambient --overwrite
+
+#     - name: Apply Kubernetes manifests
+#       run: |
+#         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-sg-pvc.yaml
+#         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-secret.yaml
+#         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-service.yaml
+#         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-deployment.yaml
+#         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/configmap.yaml
+#         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/secret.yaml
+#         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/deployment.yaml
+#         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/service.yaml
+
+#     - name: Rolling update application image
+#       run: |
+#         kubectl -n ${{ env.NAMESPACE }} set image deployment/movieworld \
+#           movieworld=${{ env.IMAGE_URI }}:${{ github.sha }} --record
+
+#     - name: Verify rollout
+#       run: |
+#         kubectl -n ${{ env.NAMESPACE }} rollout status deployment/movieworld --timeout=180s
+
+#     # --------------------------------------------------
+#     # Summary
+#     # --------------------------------------------------
+#     - name: Add CI/CD Summary
+#       run: |
+#         echo "### MovieWorld GCP CI/CD Summary ✅" >> $GITHUB_STEP_SUMMARY
+#         echo "- Image: ${{ env.IMAGE_URI }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+#         echo "- Cluster: ${{ env.GKE_CLUSTER }}" >> $GITHUB_STEP_SUMMARY
+#         echo "- Namespace: ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
+#         echo "- Rollout completed successfully" >> $GITHUB_STEP_SUMMARY
+
+
+
+
+# # name: MovieWorld CI/CD GCP DevSecOps
+
+# # on:
+# #   push:
+# #     branches: [main]
+# #   pull_request:
+# #     branches: [main]
+
+# # permissions:
+# #   contents: read
+# #   id-token: write
+
+# # jobs:
+# #   ci-cd:
+# #     runs-on: ubuntu-latest
+
+# #     env:
+# #       IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld
+# #       PROJECT_ID: yuktaaa
+# #       GKE_CLUSTER: app-cluster
+# #       GKE_LOCATION: us-central1-a
+# #       WORKLOAD_IDENTITY_PROVIDER: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
+# #       SERVICE_ACCOUNT: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
+# #       NAMESPACE: movie
+
+# #     steps:
+# #     # --------------------------------------------------
+# #     # Checkout + Build
+# #     # --------------------------------------------------
+# #     - name: Checkout source
+# #       uses: actions/checkout@v3
+
+# #     - name: Setup JDK 17
+# #       uses: actions/setup-java@v3
+# #       with:
+# #         distribution: temurin
+# #         java-version: '17'
+# #         cache: maven
+
+# #     - name: Maven test & package
+# #       run: mvn -B clean test package
+
+# #     # --------------------------------------------------
+# #     # Docker Build + Security Scan
+# #     # --------------------------------------------------
+# #     - name: Setup Docker Buildx
+# #       uses: docker/setup-buildx-action@v3
+
+# #     - name: Build Docker image (local)
+# #       uses: docker/build-push-action@v5
+# #       with:
+# #         context: .
+# #         load: true
+# #         push: false
+# #         tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
+
+# #     - name: Trivy image scan
+# #       uses: aquasecurity/trivy-action@master
+# #       with:
+# #         image-ref: ${{ env.IMAGE_URI }}:${{ github.sha }}
+# #         severity: CRITICAL,HIGH
+# #         exit-code: 0
+
+# #     # --------------------------------------------------
+# #     # GCP Auth + Artifact Registry Push
+# #     # --------------------------------------------------
+# #     - name: Authenticate to GCP (Workload Identity)
+# #       uses: google-github-actions/auth@v2
+# #       with:
+# #         workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+# #         service_account: ${{ env.SERVICE_ACCOUNT }}
+
+# #     - name: Configure Docker for Artifact Registry
+# #       run: |
+# #         gcloud config set project ${{ env.PROJECT_ID }}
+# #         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+# #     - name: Push image to Artifact Registry
+# #       uses: docker/build-push-action@v5
+# #       with:
+# #         context: .
+# #         push: true
+# #         tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
+
+# #     # --------------------------------------------------
+# #     # GKE Deploy
+# #     # --------------------------------------------------
+# #     - name: Get GKE credentials
+# #       uses: google-github-actions/get-gke-credentials@v2
+# #       with:
+# #         cluster_name: ${{ env.GKE_CLUSTER }}
+# #         location: ${{ env.GKE_LOCATION }}
+# #         project_id: ${{ env.PROJECT_ID }}
+
+# #     - name: Apply Kubernetes manifests
+# #       run: |
+# #         kubectl apply -f kubernetes/manifests/namespace.yaml
+# #         kubectl apply -f kubernetes/manifests/mysql-sg-pvc.yaml || true
+# #         kubectl apply -f kubernetes/manifests/mysql-secret.yaml
+# #         kubectl apply -f kubernetes/manifests/mysql-deployment.yaml
+# #         kubectl apply -f kubernetes/manifests/mysql-service.yaml
+# #         kubectl apply -f kubernetes/manifests/secret.yaml
+# #         kubectl apply -f kubernetes/manifests/configmap.yaml
+# #         kubectl apply -f kubernetes/manifests/deployment.yaml
+# #         kubectl apply -f kubernetes/manifests/service.yaml
+
+# #     - name: Update application image (rolling update)
+# #       run: |
+# #         kubectl -n ${{ env.NAMESPACE }} set image deployment/movieworld \
+# #           movieworld=${{ env.IMAGE_URI }}:${{ github.sha }} \
+# #           --record
+
+# #     - name: Verify rollout
+# #       run: |
+# #         kubectl -n ${{ env.NAMESPACE }} rollout status deployment/movieworld --timeout=180s
 name: MovieWorld CI/CD GCP DevSecOps
 
 on:
@@ -28,15 +286,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # --------------------------------------------------
-    # Checkout
-    # --------------------------------------------------
     - name: Checkout source
       uses: actions/checkout@v3
 
-    # --------------------------------------------------
-    # Java Build & Test
-    # --------------------------------------------------
     - name: Set up JDK 17
       uses: actions/setup-java@v3
       with:
@@ -47,13 +299,10 @@ jobs:
     - name: Run Unit Tests & Package
       run: mvn -B clean test package
 
-    # --------------------------------------------------
-    # Docker Build (Local) + Security Scan
-    # --------------------------------------------------
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build Docker image (local only)
+    - name: Build Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -68,10 +317,7 @@ jobs:
         severity: CRITICAL,HIGH
         exit-code: 0
 
-    # --------------------------------------------------
-    # GCP Authentication (Workload Identity)
-    # --------------------------------------------------
-    - name: Authenticate to Google Cloud
+    - name: Authenticate to GCP
       uses: google-github-actions/auth@v2
       with:
         workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
@@ -82,9 +328,6 @@ jobs:
         gcloud config set project ${{ env.PROJECT_ID }}
         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-    # --------------------------------------------------
-    # Push Image to Artifact Registry
-    # --------------------------------------------------
     - name: Push image to Artifact Registry
       uses: docker/build-push-action@v5
       with:
@@ -92,9 +335,6 @@ jobs:
         push: true
         tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
 
-    # --------------------------------------------------
-    # GKE Deployment
-    # --------------------------------------------------
     - name: Get GKE credentials
       uses: google-github-actions/get-gke-credentials@v2
       with:
@@ -107,6 +347,10 @@ jobs:
         kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
         kubectl label namespace ${{ env.NAMESPACE }} istio.io/dataplane-mode=ambient --overwrite
 
+    - name: Replace image placeholder in deployment
+      run: |
+        sed -i "s|IMAGE_TAG|${{ env.IMAGE_URI }}:${{ github.sha }}|" kubernetes/manifests/deployment.yaml
+
     - name: Apply Kubernetes manifests
       run: |
         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-sg-pvc.yaml
@@ -118,18 +362,10 @@ jobs:
         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/deployment.yaml
         kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/service.yaml
 
-    - name: Rolling update application image
-      run: |
-        kubectl -n ${{ env.NAMESPACE }} set image deployment/movieworld \
-          movieworld=${{ env.IMAGE_URI }}:${{ github.sha }} --record
-
     - name: Verify rollout
       run: |
         kubectl -n ${{ env.NAMESPACE }} rollout status deployment/movieworld --timeout=180s
 
-    # --------------------------------------------------
-    # Summary
-    # --------------------------------------------------
     - name: Add CI/CD Summary
       run: |
         echo "### MovieWorld GCP CI/CD Summary ✅" >> $GITHUB_STEP_SUMMARY
@@ -137,122 +373,3 @@ jobs:
         echo "- Cluster: ${{ env.GKE_CLUSTER }}" >> $GITHUB_STEP_SUMMARY
         echo "- Namespace: ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
         echo "- Rollout completed successfully" >> $GITHUB_STEP_SUMMARY
-
-
-
-
-# name: MovieWorld CI/CD GCP DevSecOps
-
-# on:
-#   push:
-#     branches: [main]
-#   pull_request:
-#     branches: [main]
-
-# permissions:
-#   contents: read
-#   id-token: write
-
-# jobs:
-#   ci-cd:
-#     runs-on: ubuntu-latest
-
-#     env:
-#       IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld
-#       PROJECT_ID: yuktaaa
-#       GKE_CLUSTER: app-cluster
-#       GKE_LOCATION: us-central1-a
-#       WORKLOAD_IDENTITY_PROVIDER: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
-#       SERVICE_ACCOUNT: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
-#       NAMESPACE: movie
-
-#     steps:
-#     # --------------------------------------------------
-#     # Checkout + Build
-#     # --------------------------------------------------
-#     - name: Checkout source
-#       uses: actions/checkout@v3
-
-#     - name: Setup JDK 17
-#       uses: actions/setup-java@v3
-#       with:
-#         distribution: temurin
-#         java-version: '17'
-#         cache: maven
-
-#     - name: Maven test & package
-#       run: mvn -B clean test package
-
-#     # --------------------------------------------------
-#     # Docker Build + Security Scan
-#     # --------------------------------------------------
-#     - name: Setup Docker Buildx
-#       uses: docker/setup-buildx-action@v3
-
-#     - name: Build Docker image (local)
-#       uses: docker/build-push-action@v5
-#       with:
-#         context: .
-#         load: true
-#         push: false
-#         tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
-
-#     - name: Trivy image scan
-#       uses: aquasecurity/trivy-action@master
-#       with:
-#         image-ref: ${{ env.IMAGE_URI }}:${{ github.sha }}
-#         severity: CRITICAL,HIGH
-#         exit-code: 0
-
-#     # --------------------------------------------------
-#     # GCP Auth + Artifact Registry Push
-#     # --------------------------------------------------
-#     - name: Authenticate to GCP (Workload Identity)
-#       uses: google-github-actions/auth@v2
-#       with:
-#         workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-#         service_account: ${{ env.SERVICE_ACCOUNT }}
-
-#     - name: Configure Docker for Artifact Registry
-#       run: |
-#         gcloud config set project ${{ env.PROJECT_ID }}
-#         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-
-#     - name: Push image to Artifact Registry
-#       uses: docker/build-push-action@v5
-#       with:
-#         context: .
-#         push: true
-#         tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
-
-#     # --------------------------------------------------
-#     # GKE Deploy
-#     # --------------------------------------------------
-#     - name: Get GKE credentials
-#       uses: google-github-actions/get-gke-credentials@v2
-#       with:
-#         cluster_name: ${{ env.GKE_CLUSTER }}
-#         location: ${{ env.GKE_LOCATION }}
-#         project_id: ${{ env.PROJECT_ID }}
-
-#     - name: Apply Kubernetes manifests
-#       run: |
-#         kubectl apply -f kubernetes/manifests/namespace.yaml
-#         kubectl apply -f kubernetes/manifests/mysql-sg-pvc.yaml || true
-#         kubectl apply -f kubernetes/manifests/mysql-secret.yaml
-#         kubectl apply -f kubernetes/manifests/mysql-deployment.yaml
-#         kubectl apply -f kubernetes/manifests/mysql-service.yaml
-#         kubectl apply -f kubernetes/manifests/secret.yaml
-#         kubectl apply -f kubernetes/manifests/configmap.yaml
-#         kubectl apply -f kubernetes/manifests/deployment.yaml
-#         kubectl apply -f kubernetes/manifests/service.yaml
-
-#     - name: Update application image (rolling update)
-#       run: |
-#         kubectl -n ${{ env.NAMESPACE }} set image deployment/movieworld \
-#           movieworld=${{ env.IMAGE_URI }}:${{ github.sha }} \
-#           --record
-
-#     - name: Verify rollout
-#       run: |
-#         kubectl -n ${{ env.NAMESPACE }} rollout status deployment/movieworld --timeout=180s
