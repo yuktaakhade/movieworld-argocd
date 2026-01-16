@@ -1,3 +1,113 @@
+# # apiVersion: apps/v1
+# # kind: Deployment
+# # metadata:
+# #   name: movieworld
+# #   namespace: movie
+# #   labels:
+# #     app: movieworld
+# #     version: v1
+# # spec:
+# #   replicas: 2
+# #   selector:
+# #     matchLabels:
+# #       app: movieworld
+# #       version: v1
+# #   template:
+# #     metadata:
+# #       labels:
+# #         app: movieworld
+# #         version: v1
+# #       # annotations:
+# #         # prometheus.io/scrape: "true"
+# #         # prometheus.io/path: "/actuator/prometheus"
+# #         # prometheus.io/port: "9091"
+# #         # sidecar.istio.io/inject: "true"
+# #     spec:
+# #       containers:
+# #       - name: movieworld
+# #         # Image will be tagged with GitHub Actions commit SHA by CI: ${{ github.sha }}
+# #         image: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld:PLACEHOLDER
+
+# #         # When using an immutable tag prefer IfNotPresent so nodes reuse pulled image.
+# #         imagePullPolicy: IfNotPresent
+# #         ports:
+# #         - containerPort: 9091
+# #         env:
+# #         - name: SPRING_PROFILES_ACTIVE
+# #           value: "prod"
+# #         - name: SERVER_PORT
+# #           value: "9091"
+# #         - name: MOVIE_REVIEW_SERVICE_URL
+# #           valueFrom:
+# #             configMapKeyRef:
+# #               name: movieworld-config
+# #               key: moviereview-service-url
+# #         - name: OTEL_EXPORTER_OTLP_ENDPOINT
+# #           value: "http://otel-collector:4317"
+# #         - name: OTEL_RESOURCE_ATTRIBUTES
+# #           value: "service.name=movieworld,service.version=1.0.0,deployment.environment=production"
+# #         - name: OTEL_METRICS_EXPORTER
+# #           value: "otlp"
+# #         - name: OTEL_LOGS_EXPORTER
+# #           value: "otlp"
+# #         - name: OTEL_PROPAGATORS
+# #           value: "tracecontext,baggage,b3"
+# #         - name: DB_HOST
+# #           value: "movieworld-mysql.movie.svc.cluster.local"
+# #         - name: DB_PORT
+# #           value: "3306"
+# #         - name: DB_NAME
+# #           value: "movieworld"
+# #         - name: DB_USER
+# #           valueFrom:
+# #             secretKeyRef:
+# #               name: movieworld-mysql-secret
+# #               key: mysql-user
+# #         - name: DB_PASSWORD
+# #           valueFrom:
+# #             secretKeyRef:
+# #               name: movieworld-mysql-secret
+# #               key: mysql-password
+# #         - name: MYSQL_URL
+# #           value: "jdbc:mysql://movieworld-mysql.movie.svc.cluster.local:3306/movieworld?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+# #         - name: MYSQL_USERNAME
+# #           valueFrom:
+# #             secretKeyRef:
+# #               name: movieworld-mysql-secret
+# #               key: mysql-user
+# #         - name: MYSQL_PASSWORD
+# #           valueFrom:
+# #             secretKeyRef:
+# #               name: movieworld-mysql-secret
+# #               key: mysql-password
+# #         # Using DB_USER and DB_PASSWORD from above
+# #         # resources:
+# #         #   requests:
+# #         #     memory: "512Mi"
+# #         #     cpu: "250m"
+# #         #   limits:
+# #         #     memory: "1Gi"
+# #         #     cpu: "500m"
+# #         readinessProbe:
+# #           httpGet:
+# #             path: /actuator/health
+# #             port: 9091
+# #           initialDelaySeconds: 60
+# #           periodSeconds: 10
+# #           failureThreshold: 5
+# #         livenessProbe:
+# #           httpGet:
+# #             path: /actuator/health
+# #             port: 9091
+# #           initialDelaySeconds: 60
+# #           periodSeconds: 15
+# #         volumeMounts:
+# #         - name: config-volume
+# #           mountPath: /app/config
+# #       volumes:
+# #       - name: config-volume
+# #         configMap:
+# #           name: movieworld-config
 # apiVersion: apps/v1
 # kind: Deployment
 # metadata:
@@ -17,31 +127,27 @@
 #       labels:
 #         app: movieworld
 #         version: v1
-#       # annotations:
-#         # prometheus.io/scrape: "true"
-#         # prometheus.io/path: "/actuator/prometheus"
-#         # prometheus.io/port: "9091"
-#         # sidecar.istio.io/inject: "true"
 #     spec:
 #       containers:
 #       - name: movieworld
-#         # Image will be tagged with GitHub Actions commit SHA by CI: ${{ github.sha }}
-#         image: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld:PLACEHOLDER
-
-#         # When using an immutable tag prefer IfNotPresent so nodes reuse pulled image.
+#         # Image is injected at deploy time by GitHub Actions
+#         image: IMAGE
 #         imagePullPolicy: IfNotPresent
 #         ports:
 #         - containerPort: 9091
+
 #         env:
 #         - name: SPRING_PROFILES_ACTIVE
 #           value: "prod"
 #         - name: SERVER_PORT
 #           value: "9091"
+
 #         - name: MOVIE_REVIEW_SERVICE_URL
 #           valueFrom:
 #             configMapKeyRef:
 #               name: movieworld-config
 #               key: moviereview-service-url
+
 #         - name: OTEL_EXPORTER_OTLP_ENDPOINT
 #           value: "http://otel-collector:4317"
 #         - name: OTEL_RESOURCE_ATTRIBUTES
@@ -52,12 +158,14 @@
 #           value: "otlp"
 #         - name: OTEL_PROPAGATORS
 #           value: "tracecontext,baggage,b3"
+
 #         - name: DB_HOST
 #           value: "movieworld-mysql.movie.svc.cluster.local"
 #         - name: DB_PORT
 #           value: "3306"
 #         - name: DB_NAME
 #           value: "movieworld"
+
 #         - name: DB_USER
 #           valueFrom:
 #             secretKeyRef:
@@ -68,26 +176,7 @@
 #             secretKeyRef:
 #               name: movieworld-mysql-secret
 #               key: mysql-password
-#         - name: MYSQL_URL
-#           value: "jdbc:mysql://movieworld-mysql.movie.svc.cluster.local:3306/movieworld?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
-#         - name: MYSQL_USERNAME
-#           valueFrom:
-#             secretKeyRef:
-#               name: movieworld-mysql-secret
-#               key: mysql-user
-#         - name: MYSQL_PASSWORD
-#           valueFrom:
-#             secretKeyRef:
-#               name: movieworld-mysql-secret
-#               key: mysql-password
-#         # Using DB_USER and DB_PASSWORD from above
-#         # resources:
-#         #   requests:
-#         #     memory: "512Mi"
-#         #     cpu: "250m"
-#         #   limits:
-#         #     memory: "1Gi"
-#         #     cpu: "500m"
+
 #         readinessProbe:
 #           httpGet:
 #             path: /actuator/health
@@ -95,15 +184,18 @@
 #           initialDelaySeconds: 60
 #           periodSeconds: 10
 #           failureThreshold: 5
+
 #         livenessProbe:
 #           httpGet:
 #             path: /actuator/health
 #             port: 9091
 #           initialDelaySeconds: 60
 #           periodSeconds: 15
+
 #         volumeMounts:
 #         - name: config-volume
 #           mountPath: /app/config
+
 #       volumes:
 #       - name: config-volume
 #         configMap:
@@ -116,23 +208,28 @@ metadata:
   labels:
     app: movieworld
     version: v1
+
 spec:
   replicas: 2
+
   selector:
     matchLabels:
       app: movieworld
       version: v1
+
   template:
     metadata:
       labels:
         app: movieworld
         version: v1
+
     spec:
       containers:
       - name: movieworld
-        # Image is injected at deploy time by GitHub Actions
+        # Image is updated at deploy time via kubectl set image
         image: IMAGE
         imagePullPolicy: IfNotPresent
+
         ports:
         - containerPort: 9091
 
