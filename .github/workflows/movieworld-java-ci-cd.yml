@@ -335,41 +335,41 @@ jobs:
         push: true
         tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
 
-    - name: Get GKE credentials
-      uses: google-github-actions/get-gke-credentials@v2
-      with:
-        cluster_name: ${{ env.GKE_CLUSTER }}
-        location: ${{ env.ZONE }}
-        project_id: ${{ env.PROJECT_ID }}
+    # - name: Get GKE credentials
+    #   uses: google-github-actions/get-gke-credentials@v2
+    #   with:
+    #     cluster_name: ${{ env.GKE_CLUSTER }}
+    #     location: ${{ env.ZONE }}
+    #     project_id: ${{ env.PROJECT_ID }}
 
-    - name: Ensure namespace exists
-      run: |
-        kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-        kubectl label namespace ${{ env.NAMESPACE }} istio.io/dataplane-mode=ambient --overwrite
+    # - name: Ensure namespace exists
+    #   run: |
+    #     kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+    #     kubectl label namespace ${{ env.NAMESPACE }} istio.io/dataplane-mode=ambient --overwrite
 
-    - name: Replace image placeholder in deployment
-      run: |
-        sed -i "s|IMAGE_TAG|${{ env.IMAGE_URI }}:${{ github.sha }}|" kubernetes/manifests/deployment.yaml
+    # - name: Replace image placeholder in deployment
+    #   run: |
+    #     sed -i "s|IMAGE_TAG|${{ env.IMAGE_URI }}:${{ github.sha }}|" kubernetes/manifests/deployment.yaml
 
-    - name: Apply Kubernetes manifests
-      run: |
-        kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-sg-pvc.yaml
-        kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-secret.yaml
-        kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-service.yaml
-        kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-deployment.yaml
-        kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/configmap.yaml
-        kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/secret.yaml
-        kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/deployment.yaml
-        kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/service.yaml
+    # - name: Apply Kubernetes manifests
+    #   run: |
+    #     kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-sg-pvc.yaml
+    #     kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-secret.yaml
+    #     kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-service.yaml
+    #     kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/mysql-deployment.yaml
+    #     kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/configmap.yaml
+    #     kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/secret.yaml
+    #     kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/deployment.yaml
+    #     kubectl apply -n ${{ env.NAMESPACE }} -f kubernetes/manifests/service.yaml
 
-    - name: Verify rollout
-      run: |
-        kubectl -n ${{ env.NAMESPACE }} rollout status deployment/movieworld --timeout=180s
+    # - name: Verify rollout
+    #   run: |
+    #     kubectl -n ${{ env.NAMESPACE }} rollout status deployment/movieworld --timeout=180s
 
-    - name: Add CI/CD Summary
-      run: |
-        echo "### MovieWorld GCP CI/CD Summary ✅" >> $GITHUB_STEP_SUMMARY
-        echo "- Image: ${{ env.IMAGE_URI }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Cluster: ${{ env.GKE_CLUSTER }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Namespace: ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Rollout completed successfully" >> $GITHUB_STEP_SUMMARY
+    # - name: Add CI/CD Summary
+    #   run: |
+    #     echo "### MovieWorld GCP CI/CD Summary ✅" >> $GITHUB_STEP_SUMMARY
+    #     echo "- Image: ${{ env.IMAGE_URI }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+    #     echo "- Cluster: ${{ env.GKE_CLUSTER }}" >> $GITHUB_STEP_SUMMARY
+    #     echo "- Namespace: ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
+    #     echo "- Rollout completed successfully" >> $GITHUB_STEP_SUMMARY
