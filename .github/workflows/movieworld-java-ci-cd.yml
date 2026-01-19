@@ -88,4 +88,3 @@ steps:
       git add "${DEPLOYMENT_FILE}"
       git diff --cached --quiet || git commit -m "chore: update movieworld image to ${GITHUB_SHA}"
       git push
-
