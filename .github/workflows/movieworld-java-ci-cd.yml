@@ -1,4 +1,5 @@
 name: MovieWorld CI/CD GCP DevSecOps
+
 on:
   push:
     branches: [main]
@@ -6,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 env:
@@ -16,6 +17,7 @@ env:
   IMAGE_NAME: movieworld
   ARTIFACT_REPO: movieworld-dockerimage-repo
   IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld
+  IMAGE_TAG: ${{ github.sha }}
   GKE_CLUSTER: app-cluster
   NAMESPACE: movie
   WORKLOAD_IDENTITY_PROVIDER: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
@@ -49,12 +51,12 @@ jobs:
         context: .
         load: true
         push: false
-        tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
+        tags: ${{ env.IMAGE_URI }}:${{ env.IMAGE_TAG }}
 
     - name: Trivy Image Scan
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ env.IMAGE_URI }}:${{ github.sha }}
+        image-ref: ${{ env.IMAGE_URI }}:${{ env.IMAGE_TAG }}
         severity: CRITICAL,HIGH
         exit-code: 0
 
@@ -74,4 +76,92 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ env.IMAGE_URI }}:${{ github.sha }} 
+        tags: ${{ env.IMAGE_URI }}:${{ env.IMAGE_TAG }}
+
+    - name: Update Kubernetes manifest image tag
+      run: |
+        sed -i "s|image: .*movieworld:.*|image: ${IMAGE_URI}:${IMAGE_TAG}|g" kubernetes/manifests/*.yaml
+
+
+
+# name: MovieWorld CI/CD GCP DevSecOps
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#     branches: [main]
+
+# permissions:
+#   contents: read
+#   id-token: write
+
+# env:
+#   PROJECT_ID: yuktaaa
+#   REGION: us-central1
+#   ZONE: us-central1-a
+#   IMAGE_NAME: movieworld
+#   ARTIFACT_REPO: movieworld-dockerimage-repo
+#   IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld
+#   GKE_CLUSTER: app-cluster
+#   NAMESPACE: movie
+#   WORKLOAD_IDENTITY_PROVIDER: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
+#   SERVICE_ACCOUNT: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
+
+# jobs:
+#   ci-cd:
+#     name: Build, Scan, Push & Deploy to GKE
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: Checkout source
+#       uses: actions/checkout@v3
+
+#     - name: Set up JDK 17
+#       uses: actions/setup-java@v3
+#       with:
+#         distribution: temurin
+#         java-version: '17'
+#         cache: maven
+
+#     - name: Run Unit Tests & Package
+#       run: mvn -B clean test package
+
+#     - name: Set up Docker Buildx
+#       uses: docker/setup-buildx-action@v3
+
+#     - name: Build Docker image
+#       uses: docker/build-push-action@v5
+#       with:
+#         context: .
+#         load: true
+#         push: false
+#         tags: ${{ env.IMAGE_URI }}:${{ github.sha }}
+
+#     - name: Trivy Image Scan
+#       uses: aquasecurity/trivy-action@master
+#       with:
+#         image-ref: ${{ env.IMAGE_URI }}:${{ github.sha }}
+#         severity: CRITICAL,HIGH
+#         exit-code: 0
+
+#     - name: Authenticate to GCP
+#       uses: google-github-actions/auth@v2
+#       with:
+#         workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+#         service_account: ${{ env.SERVICE_ACCOUNT }}
+
+#     - name: Configure gcloud & Docker
+#       run: |
+#         gcloud config set project ${{ env.PROJECT_ID }}
+#         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+#     - name: Push image to Artifact Registry
+#       uses: docker/build-push-action@v5
+#       with:
+#         context: .
+#         push: true
+#         tags: ${{ env.IMAGE_URI }}:${{ github.sha }} 
+
+#     - name: Update Kubernetes manifest image tag
+#       run: |
+#         sed -i "s|image: .*movieworld:.*|image: ${IMAGE_URI}:${IMAGE_TAG}|g" kubernetes/manifests/*.yaml
