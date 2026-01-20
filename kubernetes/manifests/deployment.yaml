@@ -1,5 +1,3 @@
-
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,7 +7,7 @@ metadata:
     app: movieworld
     version: v1
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: movieworld
@@ -28,7 +26,7 @@ spec:
       containers:
       - name: movieworld
         # Image will be tagged with GitHub Actions commit SHA by CI: ${{ github.sha }}
-        image: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld:833db0218d861011b8ace0c564500f08dba686d7
+        image: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld:37c39a49e28ee34a74d200c9164c31c46f51cd6f
 
         # When using an immutable tag prefer IfNotPresent so nodes reuse pulled image.
         imagePullPolicy: IfNotPresent
