@@ -1,5 +1,4 @@
 name: MovieWorld CI/CD GCP DevSecOps
-
 on:
   push:
     branches: [main]
