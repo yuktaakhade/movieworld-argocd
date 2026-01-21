@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: movie
+  labels:
+    istio-injection: enabled
+    name: movie

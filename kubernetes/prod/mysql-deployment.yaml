@@ -1,0 +1,166 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movieworld-mysql
+  namespace: movie
+  labels:
+    app: movieworld-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movieworld-mysql
+  template:
+    metadata:
+      labels:
+        app: movieworld-mysql
+    spec:
+      securityContext:           # ✅ Pod-level securityContext
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        fsGroupChangePolicy: Always
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: movieworld-mysql-secret
+              key: mysql-root-password
+        - name: MYSQL_DATABASE
+          value: movieworld
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: movieworld-mysql-secret
+              key: mysql-user
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: movieworld-mysql-secret
+              key: mysql-password
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - "mysqladmin ping -uroot -p$MYSQL_ROOT_PASSWORD"
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - "mysqladmin ping -uroot -p$MYSQL_ROOT_PASSWORD"
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 2
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: movieworld-mysql-pvc
+
+ 
+
+
+
+
+
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: movieworld-mysql
+#   namespace: movie
+#   labels:
+#     app: movieworld-mysql
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: movieworld-mysql
+#   template:
+#     metadata:
+#       labels:
+#         app: movieworld-mysql
+#     spec:
+#       containers:
+#       - name: mysql
+#         image: mysql:8.0
+#         env:
+#         - name: MYSQL_ROOT_PASSWORD
+#           valueFrom:
+#             secretKeyRef:
+#               name: movieworld-mysql-secret
+#               key: mysql-root-password
+#         - name: MYSQL_DATABASE
+#           value: movieworld
+#         - name: MYSQL_USER
+#           valueFrom:
+#             secretKeyRef:
+#               name: movieworld-mysql-secret
+#               key: mysql-user
+#         - name: MYSQL_PASSWORD
+#           valueFrom:
+#             secretKeyRef:
+#               name: movieworld-mysql-secret
+#               key: mysql-password
+#         ports:
+#         - containerPort: 3306
+#           name: mysql
+#         volumeMounts:
+#         - name: mysql-persistent-storage
+#           mountPath: /var/lib/mysql
+#         securityContext:
+#           runAsUser: 999
+#           runAsGroup: 999
+#           fsGroup: 999
+#           allowPrivilegeEscalation: false
+#         resources:
+#           requests:
+#             memory: "256Mi"
+#             cpu: "100m"
+#           limits:
+#             memory: "512Mi"
+#             cpu: "500m"
+#         livenessProbe:
+#           exec:
+#             command:
+#               - sh
+#               - -c
+#               - "mysqladmin ping -uroot -p$MYSQL_ROOT_PASSWORD"
+#           initialDelaySeconds: 30
+#           periodSeconds: 10
+#           timeoutSeconds: 5
+#         readinessProbe:
+#           exec:
+#             command:
+#               - sh
+#               - -c
+#               - "mysqladmin ping -uroot -p$MYSQL_ROOT_PASSWORD"
+#           initialDelaySeconds: 10
+#           periodSeconds: 5
+#           timeoutSeconds: 2
+#       volumes:
+#       - name: mysql-persistent-storage
+#         persistentVolumeClaim:
+#           claimName: movieworld-mysql-pvc
+#       - name: mysql-secret-volume
+#         secret:
+#           secretName: movieworld-mysql-secret
