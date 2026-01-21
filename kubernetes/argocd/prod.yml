@@ -1,0 +1,14 @@
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: movieworld-prod
+#   namespace: argocd
+# spec:
+#   source:
+#     repoURL: https://github.com/yuktaakhade/movieworld-argocd.git
+#     targetRevision: main
+#     path: kubernetes/prod
+#   destination:
+#     server: https://<PROD-CLUSTER-API>
+#     namespace: movie-prod
+# # 
