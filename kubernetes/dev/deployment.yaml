@@ -26,7 +26,7 @@ spec:
       containers:
       - name: movieworld
         # Image will be tagged with GitHub Actions commit SHA by CI: ${{ github.sha }}
-        image: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld:2c79f0024d6ba52417c8e6fff62324a1f51ca538
+        image: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld:3042b53f5a8f44ea6c4853980fc7216c4d76c61e
 
         # When using an immutable tag prefer IfNotPresent so nodes reuse pulled image.
         imagePullPolicy: IfNotPresent
