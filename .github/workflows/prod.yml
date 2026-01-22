@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 env:
-  IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld
+  IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-docker-image-repo/movieworld
 
 jobs:
   prod-deploy:

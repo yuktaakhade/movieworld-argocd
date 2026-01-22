@@ -12,7 +12,7 @@ permissions:
 env:
   PROJECT_ID: yuktaaa
   REGION: us-central1
-  IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-dockerimage-repo/movieworld
+  IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-docker-image-repo/movieworld
   IMAGE_TAG: ${{ github.sha }}
   WORKLOAD_IDENTITY_PROVIDER: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
   SERVICE_ACCOUNT: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
