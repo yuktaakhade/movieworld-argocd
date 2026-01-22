@@ -2,8 +2,8 @@ name: MovieWorld CI/CD GCP DevSecOps
 on:
   push:
     branches: [feature-env-dev,prod]
-  # pull_request:
-  #   branches: [main]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
