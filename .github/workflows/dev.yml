@@ -11,8 +11,8 @@ permissions:
 
 env:
   PROJECT_ID: yuktaaa
-  REGION: us-central1
-  IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-docker-image-repo/movieworld
+  REGION: us-west1
+  IMAGE_URI: us-west1-docker.pkg.dev/yuktaaa/movieworld-docker-image-repo/movieworld
   IMAGE_TAG: ${{ github.sha }}
   WORKLOAD_IDENTITY_PROVIDER: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
   SERVICE_ACCOUNT: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
@@ -50,7 +50,7 @@ jobs:
     - name: Configure gcloud & Docker
       run: |
         gcloud config set project ${{ env.PROJECT_ID }}
-        gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+        gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
 
     # ----------------------------------
     # SINGLE BUILD + PUSH (CORRECT)
