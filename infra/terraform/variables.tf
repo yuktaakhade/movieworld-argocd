@@ -4,7 +4,7 @@ variable "project_id" {
 
 variable "region" {
   type    = string
-  default = "us-central1"
+  default = "us-west1"
 }
 
 variable "service_account_id" {
@@ -54,7 +54,7 @@ variable "gke_cluster_name" {
 
 variable "gke_location" {
   type    = string
-  default = "us-central1-a"
+  default = "us-west1-a"
 }
 
 variable "node_machine_type" {
