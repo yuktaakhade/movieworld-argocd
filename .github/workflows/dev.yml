@@ -52,9 +52,6 @@ jobs:
         gcloud config set project ${{ env.PROJECT_ID }}
         gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
 
-    # ----------------------------------
-    # SINGLE BUILD + PUSH (CORRECT)
-    # ----------------------------------
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
