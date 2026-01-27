@@ -1,10 +1,45 @@
-# name: Promote to PROD
+# # name: Promote to PROD
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       image_tag:
+#         description: "Image SHA to deploy"
+#         required: true
+
+# permissions:
+#   contents: write
+
+# env:
+#   IMAGE_URI: us-central1-docker.pkg.dev/yuktaaa/movieworld-docker-image-repo/movieworld
+
+# jobs:
+#   prod-deploy:
+#     name: Deploy to PROD
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: Checkout source
+#       uses: actions/checkout@v3
+
+#     - name: Update PROD Kubernetes manifest
+#       run: |
+#         sed -i "s|image: .*movieworld:.*|image: ${IMAGE_URI}:${{ inputs.image_tag }}|g" kubernetes/prod/deployment.yaml
+
+#     - name: Commit and push PROD manifest
+#       run: |
+#         git config user.name "github-actions"
+#         git config user.email "github-actions@github.com"
+#         git add kubernetes/prod/deployment.yaml
+#         git commit -m "ci(prod): promote image ${{ inputs.image_tag }}" || echo "No changes to commit"
+#         git push origin main
+name: Promote Image to PROD
 
 on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image SHA to deploy"
+        description: "Docker image SHA to promote to PROD (from DEV)"
         required: true
 
 permissions:
@@ -15,21 +50,26 @@ env:
 
 jobs:
   prod-deploy:
-    name: Deploy to PROD
+    name: Promote Image to PROD
     runs-on: ubuntu-latest
+  # GitHub environment protection
 
     steps:
-    - name: Checkout source
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Update PROD Kubernetes manifest
-      run: |
-        sed -i "s|image: .*movieworld:.*|image: ${IMAGE_URI}:${{ inputs.image_tag }}|g" kubernetes/prod/deployment.yaml
+      - name: Update PROD Kubernetes deployment image
+        run: |
+          sed -i "s|image: .*movieworld:.*|image: ${IMAGE_URI}:${{ inputs.image_tag }}|g" \
+          kubernetes/prod/deployment.yaml
 
-    - name: Commit and push PROD manifest
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git add kubernetes/prod/deployment.yaml
-        git commit -m "ci(prod): promote image ${{ inputs.image_tag }}" || echo "No changes to commit"
-        git push origin main
+      - name: Commit PROD manifest update
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add kubernetes/prod/deployment.yaml
+          git commit -m "ci(prod): promote image ${{ inputs.image_tag }}" || echo "No changes to commit"
+
+      - name: Push changes to main branch
+        run: |
+          git push origin main
