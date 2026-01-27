@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: movieworld-mysql
-  namespace: movie
+  namespace: movie-prod
   labels:
     app: movieworld-mysql
 spec:

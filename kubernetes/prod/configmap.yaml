@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: movieworld-config
-  namespace: movie
+  namespace: movie-prod
 data:
   application.properties: |
     # Database Configuration
