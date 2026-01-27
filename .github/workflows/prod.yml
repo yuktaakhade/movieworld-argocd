@@ -17,7 +17,6 @@ jobs:
   prod-deploy:
     name: Deploy to PROD
     runs-on: ubuntu-latest
-    environment: production   # GitHub approval required if configured
 
     steps:
     - name: Checkout source
