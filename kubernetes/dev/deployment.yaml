@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: movieworld
-  namespace: movie
+  namespace: movie-dev
   labels:
     app: movieworld
     version: v1
@@ -34,7 +34,7 @@ spec:
         - containerPort: 9091
         env:
         - name: SPRING_PROFILES_ACTIVE
-          value: "prod"
+          value: "dev"
         - name: SERVER_PORT
           value: "9091"
         - name: MOVIE_REVIEW_SERVICE_URL
@@ -45,7 +45,7 @@ spec:
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "http://otel-collector:4317"
         - name: OTEL_RESOURCE_ATTRIBUTES
-          value: "service.name=movieworld,service.version=1.0.0,deployment.environment=production"
+          value: "service.name=movieworld,service.version=1.0.0,deployment.environment=dev"
         - name: OTEL_METRICS_EXPORTER
           value: "otlp"
         - name: OTEL_LOGS_EXPORTER
