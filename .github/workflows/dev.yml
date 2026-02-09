@@ -9,12 +9,12 @@ permissions:
   id-token: write
 
 env:
-  PROJECT_ID: yuktaaa
-  REGION: us-west1
-  IMAGE_URI: us-west1-docker.pkg.dev/yuktaaa/movieworld-docker-image-repo/movieworld
+  PROJECT_ID: yukta2
+  REGION: us-central1
+  IMAGE_URI: us-central1-docker.pkg.dev/yukta2/movieworld-docker-image-repo/movieworld
   IMAGE_TAG: ${{ github.sha }}
-  WORKLOAD_IDENTITY_PROVIDER: projects/291263715379/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
-  SERVICE_ACCOUNT: movieworld-service-account@yuktaaa.iam.gserviceaccount.com
+  WORKLOAD_IDENTITY_PROVIDER: projects/145057498272/locations/global/workloadIdentityPools/wif-pool/providers/wif-provider
+  SERVICE_ACCOUNT: movieworld-service-account@yukta2.iam.gserviceaccount.com
 
 jobs:
   ci-cd:
@@ -58,7 +58,7 @@ jobs:
     - name: Configure gcloud & Docker
       run: |
         gcloud config set project ${{ env.PROJECT_ID }}
-        gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
+        gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
